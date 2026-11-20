@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafetyPro · Gestor de Cartas Descriptivas · v1.4</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            red: '#DC2626',
+                            redDark: '#991B1B',
+                            blue: '#1E3A8A',
+                            blueLight: '#3B82F6',
+                            navy: '#0F172A',
+                            emerald: '#059669',
+                            amber: '#D97706'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .safetypro-logo { display: block; max-width: 100%; object-fit: contain; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Impresión limpia: solo la carta, sin interfaz ni saltos de página forzados. */
+        @page { size: A4; margin: 0; }
+        @media print {
+            html, body {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+                overflow: visible !important;
+                background: #fff !important;
+                color: #000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body > header, .no-print, aside { display: none !important; }
+            body > .flex.flex-1,
+            body > div.flex.flex-1,
+            main {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+            .tab-pane { display: none !important; }
+            #pane-vista-previa {
+                display: block !important;
+                visibility: visible !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #pane-vista-previa > .no-print { display: none !important; }
+            #carta-documento, .print-container {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: none !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 12mm 13mm 14mm !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                background: #fff !important;
+                color: #000 !important;
+                transform: none !important;
+            }
+            #carta-documento * { box-sizing: border-box; }
+            #carta-documento > * { break-inside: auto; page-break-inside: auto; }
+            #carta-documento table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                break-inside: auto !important;
+                page-break-inside: auto !important;
+            }
+            #carta-documento thead { display: table-header-group !important; }
+            #carta-documento tfoot { display: table-footer-group !important; }
+            #carta-documento tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            #carta-documento th, #carta-documento td { break-inside: avoid; }
+            #carta-documento h1, #carta-documento h2,
+            #carta-documento h3, #carta-documento h4 {
+                break-after: avoid !important;
+                page-break-after: avoid !important;
+            }
+            #carta-documento p, #carta-documento li { orphans: 3; widows: 3; }
+            #carta-documento img { max-width: 100% !important; }
+            /* La carta fluye naturalmente; las secciones no comienzan obligatoriamente en página nueva. */
+            .print-page-break { break-before: auto !important; page-break-before: auto !important; }
+            #carta-documento .print-signatures { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .safetypro-logo { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            #carta-documento a { color: inherit !important; text-decoration: none !important; }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden bg-slate-950 text-slate-100">
+
+    <!-- HEADER / TOPBAR -->
+    <header class="no-print bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-lg z-20">
+        <div class="flex items-center space-x-3">
+            <img id="app-safetypro-logo" alt="SafetyPro" class="safetypro-logo h-10 w-56 object-contain" />
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                    GESTOR DE CARTAS DESCRIPTIVAS
+                    <span class="text-xs bg-red-600/30 text-red-400 border border-red-500/30 font-semibold px-2 py-0.5 rounded-full">Panamá · v1.4</span>
+                </h1>
+                <p class="text-xs text-slate-400">Decreto Ejecutivo 346 • Ley 57 / Ley 372 • Actualizaciones AHA / ILCOR 2025 • STOP THE BLEED® ACS 2025 • TCCC 2026 • TECC</p>
+            </div>
+        </div>
+
+        <!-- Acciones rápidas Top -->
+        <div class="flex items-center space-x-2">
+            <button onclick="switchTab('vista-previa')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-2 shadow">
+                <i class="fa-solid fa-file-contract"></i> Ver Carta Descriptiva
+            </button>
+            <button onclick="printCarta()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-2">
+                <i class="fa-solid fa-print"></i> Imprimir / PDF
+            </button>
+        </div>
+    </header>
+
+    <!-- WORKSPACE CONTAINER -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- SIDEBAR NAVIGATION (NO PRINT) -->
+        <aside class="no-print w-64 bg-slate-900/95 border-r border-slate-800 flex flex-col shrink-0">
+            <nav class="p-3 space-y-1 text-sm font-medium flex-1 overflow-y-auto custom-scrollbar">
+                <div class="px-3 py-2 text-xs font-semibold uppercase text-slate-500 tracking-wider">Navegación Principal</div>
+                
+                <button onclick="switchTab('configuracion')" id="tab-btn-configuracion" class="tab-link w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition bg-blue-600 text-white font-semibold">
+                    <i class="fa-solid fa-sliders text-base w-5 text-center"></i>
+                    <span>1. Configuración Curso</span>
+                </button>
+
+                <button onclick="switchTab('matriz-riesgos')" id="tab-btn-matriz-riesgos" class="tab-link w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition text-slate-400 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-layer-group text-base w-5 text-center"></i>
+                    <span>2. Riesgos & Módulos</span>
+                </button>
+
+                <button onclick="switchTab('marco-legal')" id="tab-btn-marco-legal" class="tab-link w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition text-slate-400 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-scale-balanced text-base w-5 text-center"></i>
+                    <span>3. Marco Legal Panamá</span>
+                </button>
+
+                <button onclick="switchTab('normas-internacionales')" id="tab-btn-normas-internacionales" class="tab-link w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition text-slate-400 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-globe text-base w-5 text-center"></i>
+                    <span>4. Guías 2025/2026</span>
+                </button>
+
+                <button onclick="switchTab('vista-previa')" id="tab-btn-vista-previa" class="tab-link w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800 hover:border-slate-700 mt-2">
+                    <i class="fa-solid fa-file-signature text-base w-5 text-center text-red-500"></i>
+                    <span class="text-red-400 font-bold">5. Carta Descriptiva</span>
+                </button>
+            </nav>
+
+            <!-- RESUMEN DINÁMICO SIDEBAR -->
+            <div class="p-3 bg-slate-950/80 border-t border-slate-800 text-xs space-y-2">
+                <div class="font-bold text-slate-300 flex justify-between items-center">
+                    <span>Resumen de Carga</span>
+                    <span id="badge-nivel" class="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 text-[10px]">Básico</span>
+                </div>
+                <div class="space-y-1 text-slate-400">
+                    <div class="flex justify-between"><span>Duración Total:</span> <strong id="sidebar-horas" class="text-white">8 h 00 min</strong></div>
+                    <div class="flex justify-between"><span>Teoría / Práctica:</span> <strong id="sidebar-tp" class="text-white">3 h 12 min / 4 h 48 min</strong></div>
+                    <div class="flex justify-between"><span>Participantes:</span> <strong id="sidebar-participantes" class="text-white">15 pax</strong></div>
+                    <div class="flex justify-between"><span>Inversión:</span> <strong id="sidebar-inversion" class="text-white">Pendiente</strong></div>
+                    <div class="flex justify-between"><span>Enfoque Táctico:</span> <strong id="sidebar-tactico" class="text-amber-400">Ninguno</strong></div>
+                    <div class="flex justify-between"><span>Módulos Activos:</span> <strong id="sidebar-modulos-count" class="text-emerald-400">6</strong></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT CONTAINER -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 bg-slate-950">
+            
+            <!-- PANE 1: CONFIGURACIÓN DEL CURSO -->
+            <section id="pane-configuracion" class="tab-pane space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-gears text-blue-500"></i> Parámetros de Entrada del Programa Formativo
+                        </h2>
+                        <p class="text-xs text-slate-400">Configure los datos de la institución, rubro, participantes, nivel y normativa aplicable.</p>
+                    </div>
+                </div>
+
+                <!-- FORMULARIO PRINCIPAL EN GRID -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <!-- Columna 1: Identificación y Perfiles -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide flex items-center gap-2 border-b border-slate-800 pb-2">
+                            <i class="fa-solid fa-id-card text-blue-400"></i> Identificación del Curso
+                        </h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Curso / Capacitación</label>
+                            <input type="text" id="cfg-titulo-curso" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" value="Curso de Primer Respondiente y Soporte Vital Básico (RCP / DEA)">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Empresa / Institución Cliente</label>
+                            <input type="text" id="cfg-empresa" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" value="Empresa Industrial Panameña S.A.">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Instructor / Facilitador</label>
+                            <input type="text" id="cfg-instructor" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" value="Lic. Juan Pérez - TUM / Instructor Acreditado">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Perfil de los Participantes</label>
+                            <select id="cfg-perfil" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <option value="Legos (Personal General)" selected>Legos (Personal General sin experiencia)</option>
+                                <option value="Brigadistas de Emergencia">Brigadistas de Emergencia SSO</option>
+                                <option value="Personal de Seguridad Privada">Personal de Seguridad y Vigilancia</option>
+                                <option value="Docentes y Personal Académico">Docentes y Personal Escolar</option>
+                                <option value="Conductores y Operadores">Conductores y Operadores de Transporte</option>
+                                <option value="Personal de Salud / Primeros Auxilios">Personal de Salud / Auxiliares</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Columna 2: Rubros, Niveles y Horas -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide flex items-center gap-2 border-b border-slate-800 pb-2">
+                            <i class="fa-solid fa-sliders text-emerald-400"></i> Rubro y Niveles Horarios
+                        </h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Rubro del Cliente</label>
+                            <select id="cfg-rubro" onchange="actualizarRubro()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <option value="escolar">Escolar / Educativo</option>
+                                <option value="industrial" selected>Industrial / Manufactura</option>
+                                <option value="transporte">Transporte (Terrestre / Marítimo / Canal)</option>
+                                <option value="almacenaje">Almacenaje y Logística</option>
+                                <option value="oficinas_pub">Oficinas Públicas</option>
+                                <option value="oficinas_priv">Oficinas Privadas / Corporativo</option>
+                                <option value="seguridad">Seguridad y Vigilancia Privada</option>
+                                <option value="construccion">Construcción y Obras Civiles</option>
+                                <option value="salud">Sector Salud / Clínicas</option>
+                                <option value="comercio">Comercio y Retail</option>
+                                <option value="otros">Otros (Personalizado)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Nivel del Curso (Estándar Panamá)</label>
+                            <select id="cfg-nivel" onchange="actualizarNivel()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <option value="basico">Básico (Mínimo Legal 8h - DE 346)</option>
+                                <option value="intermedio">Intermedio (16 Horas - ACD007)</option>
+                                <option value="avanzado">Avanzado (24 Horas - ACD008)</option>
+                                <option value="primer_respondiente" selected>Primer Respondiente Ley 57 (40 Horas - ACD009)</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Carga Horaria Mínima</label>
+                                <input type="number" id="cfg-horas-totales" min="8" value="12" onchange="actualizarHorasCustom()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <span class="text-[10px] text-slate-500">Mínimo según ruta: 8h básico / 40h Primer Respondiente</span>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Participantes</label>
+                                <input type="number" id="cfg-participantes" min="1" max="100" value="15" onchange="calcularRecursos()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Costo por participante (B/.)</label>
+                            <input type="number" id="cfg-costo-participante" min="0" step="0.01" placeholder="Ingrese el costo unitario" oninput="actualizarInversion()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                            <span class="text-[10px] text-slate-500">Campo manual. La inversión total se calcula multiplicando por el número de participantes.</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Enfoque Táctico Complementario</label>
+                            <select id="cfg-tactico" onchange="actualizarTactico()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <option value="ninguno" selected>Ninguno (Estándar Civil)</option>
+                                <option value="stop_bleed">Stop the Bleed (Control de Hemorragias Masivas)</option>
+                                <option value="tecc">TECC (Tactical Emergency Casualty Care - Entorno Civil)</option>
+                                <option value="tccc">TCCC (Tactical Combat Casualty Care - Entorno Seguridad)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Columna 3: Logística e Insumos Calculados -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide flex items-center justify-between border-b border-slate-800 pb-2">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-boxes-packing text-amber-400"></i> Logística & Equipamiento</span>
+                            <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">Ratio Alumnos/Equipos</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">Equipamiento óptimo calculado dinámicamente según participantes:</p>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                                <span><i class="fa-solid fa-user-ninja text-blue-400 mr-2"></i>Maniquíes RCP Adulto QCPR:</span>
+                                <strong id="eq-maniquies-adulto" class="text-white">3 unidades</strong>
+                            </div>
+                            <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                                <span><i class="fa-solid fa-baby text-pink-400 mr-2"></i>Maniquíes RCP Lactante/Ped:</span>
+                                <strong id="eq-maniquies-ped" class="text-white">2 unidades</strong>
+                            </div>
+                            <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                                <span><i class="fa-solid fa-bolt text-amber-400 mr-2"></i>DEA de Entrenamiento:</span>
+                                <strong id="eq-dea" class="text-white">2 unidades</strong>
+                            </div>
+                            <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                                <span><i class="fa-solid fa-band-aid text-red-400 mr-2"></i>Kits de Torniquete (CAT / SAM):</span>
+                                <strong id="eq-torniquetes" class="text-white">4 unidades</strong>
+                            </div>
+                            <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                                <span><i class="fa-solid fa-box-tissue text-emerald-400 mr-2"></i>Botiquines Tipo B (DE 346):</span>
+                                <strong id="eq-botiquin" class="text-white">2 kits completos</strong>
+                            </div>
+                        </div>
+                        <div id="certificaciones-logistica-panel" class="mt-3 p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2 text-[11px]">
+                            <p class="text-emerald-300"><i class="fa-solid fa-certificate mr-1"></i><strong>Certificación digital con reconocimiento del MINSA Panamá</strong> para cada participante que acredite correctamente las evaluaciones.</p>
+                            <p id="stb-certificacion-panel" class="hidden text-amber-300"><i class="fa-solid fa-award mr-1"></i><strong>Certificado del programa oficial STOP THE BLEED®</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GRÁFICOS Y KPIS GENERALES -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center">
+                        <h4 class="text-xs font-semibold text-slate-400 mb-2">Distribución Teórico / Práctica</h4>
+                        <div class="w-48 h-48">
+                            <canvas id="chartHoras"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                        <h4 class="text-xs font-semibold text-slate-400 mb-2">Cumplimiento Normativo Obligatorio (Panamá)</h4>
+                        <div class="space-y-3 my-auto">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Ley 57 Buen Samaritano</span>
+                                    <span class="text-emerald-400 font-bold">100% Cobertura Legal</span>
+                                </div>
+                                <div class="w-full bg-slate-950 rounded-full h-2">
+                                    <div class="bg-emerald-500 h-2 rounded-full w-full"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Ley 372 Uso DEA Obligatorio</span>
+                                    <span class="text-blue-400 font-bold">Incluido</span>
+                                </div>
+                                <div class="w-full bg-slate-950 rounded-full h-2">
+                                    <div class="bg-blue-500 h-2 rounded-full w-full"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Decreto 346 Temas Mínimos</span>
+                                    <span class="text-amber-400 font-bold">Cumplido (Mín 8h)</span>
+                                </div>
+                                <div class="w-full bg-slate-950 rounded-full h-2">
+                                    <div class="bg-amber-500 h-2 rounded-full w-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-2">Certificación válida por 2 años según la Norma Técnica MINSA/Canal 1410SAL142.</p>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                        <h4 class="text-xs font-semibold text-slate-400 mb-2">Resumen de Evaluación Didáctica</h4>
+                        <div class="space-y-2 text-xs">
+                            <div class="p-2 bg-slate-950 rounded border border-slate-800 flex justify-between">
+                                <span>Evaluación Teórica:</span>
+                                <span class="font-bold text-emerald-400">Mínimo 75% Aprobación</span>
+                            </div>
+                            <div class="p-2 bg-slate-950 rounded border border-slate-800 flex justify-between">
+                                <span>Evaluación Práctica (ECOE):</span>
+                                <span class="font-bold text-white">100% Lista de Cotejo</span>
+                            </div>
+                            <div class="p-2 bg-slate-950 rounded border border-slate-800 flex justify-between">
+                                <span>Asistencia Mínima:</span>
+                                <span class="font-bold text-emerald-400">100% Horas Lectivas</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 p-2 bg-blue-950/40 border border-blue-800/40 rounded text-[11px] text-blue-300">
+                            <i class="fa-solid fa-circle-info mr-1"></i> La carta descriptiva incorporará los objetivos y justificación técnico-instruccional automáticamente.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PANE 2: MATRIZ DE RIESGOS Y MÓDULOS -->
+            <section id="pane-matriz-riesgos" class="tab-pane hidden space-y-6">
+                <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-emerald-400"></i> Matriz de Riesgos & Selección Didáctica de Módulos
+                        </h2>
+                        <p class="text-xs text-slate-400">Seleccione el rubro para precargar los riesgos típicos o active/desactive temas adicionales.</p>
+                    </div>
+                </div>
+
+                <!-- BANNER DE RUBRO Y RIESGOS -->
+                <div id="rubro-banner" class="bg-gradient-to-r from-blue-900/40 to-slate-900 border border-blue-700/50 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div id="rubro-icon-bg" class="w-12 h-12 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400 text-2xl">
+                            <i id="rubro-icon" class="fa-solid fa-industry"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold tracking-widest uppercase text-blue-400">Sector Seleccionado</span>
+                            <h3 id="rubro-nombre" class="text-lg font-bold text-white">Industrial / Manufactura</h3>
+                            <p id="rubro-descripcion" class="text-xs text-slate-300">Riesgos: Atrapamientos mecánicos, quemaduras químicas/térmicas, descargas eléctricas, intoxicaciones y amputaciones traumáticas.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SELECCIÓN DINÁMICA DE MÓDULOS -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-emerald-400"></i> Catálogo de Módulos (Obligatorios DE 346 vs Adicionales Sugeridos)
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="container-modulos-checkboxes">
+                        <!-- Generado por JS -->
+                    </div>
+                    <p class="text-[11px] text-slate-400">La evaluación final es opcional. Cuando se activa, se reserva dentro de la carga horaria total: 15 minutos teóricos y 45 minutos prácticos.</p>
+                </div>
+            </section>
+
+            <!-- PANE 3: MARCO LEGAL PANAMEÑO -->
+            <section id="pane-marco-legal" class="tab-pane hidden space-y-6">
+                <div class="pb-4 border-b border-slate-800">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-scale-balanced text-amber-400"></i> Marco Legal y Regulación en la República de Panamá
+                    </h2>
+                    <p class="text-xs text-slate-400">Leyes y Decretos Ejecutivos aplicables al primer respondiente y cursos de primeros auxilios.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Ley 57 Buen Samaritano -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Protección Legal del Rescatador</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">Vigente</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white">Ley 57 del 30 de noviembre de 2016 & Decreto Ejecutivo N.º 346 (2017)</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Garantiza la <strong>Exención de Responsabilidad Civil, Penal y Administrativa</strong> al socorrista voluntario o primer respondiente institucional que actúe de buena fe, sin remuneración directa, dentro del límite de su entrenamiento.
+                        </p>
+                        <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
+                            <div class="font-bold text-slate-200">Obligaciones legales básicas:</div>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>Obtener consentimiento expreso o implícito (inconsciencia).</li>
+                                <li>Conducta PAS: Proteger la escena, Alertar a urgencias y Socorrer.</li>
+                                <li>No abandonar a la persona socorrida hasta el relevo formal de SUME 911 o TUM.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Ley 372 DEA -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <span class="text-xs font-bold text-red-400 uppercase tracking-wider">Uso Obligatorio de Desfibriladores</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-300 border border-red-500/30">Modif. Ley 73</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white">Ley 372 del 1 de marzo de 2023 / Norma Técnica Canal-MINSA 1410SAL142</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Establece el uso obligatorio de <strong>Desfibriladores Externos Automáticos (DEA)</strong> en establecimientos comerciales, industriales, colegios, transporte y espacios de alta afluencia en Panamá.
+                        </p>
+                        <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
+                            <div class="font-bold text-slate-200">Requisitos Técnicos:</div>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>Capacitación técnica acreditada en RCP y uso del DEA.</li>
+                                <li>Recertificación bianual (cada 2 años) obligatoria.</li>
+                                <li>Mantenimiento y registro de los equipos ante el MINSA.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Perfil Primer Respondiente Decreto 346 -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Piso Horario y Contenidos Mínimos</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30">Decreto 346</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white">Duración mínima de 8 horas académicas (Art. 10)</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            El artículo 10 establece una duración mínima de 8 horas académicas para el curso básico. No prescribe una división obligatoria de 4 horas teóricas y 4 prácticas. En este dashboard, SafetyPro aplica como criterio pedagógico interno que las horas prácticas superen siempre a las teóricas.
+                        </p>
+                        <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
+                            <div class="font-bold text-slate-200">Cursos Homologados SINAPROC / BCRP:</div>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>ACD007 (16 Horas Intermedio) | ACD008 (24 Horas Avanzado)</li>
+                                <li>ACD009 (40 Horas Primer Respondiente Institucional)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Sistema de Emergencias Nacional SUME 911 -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Activación del Sistema</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Ley 31 de 2008</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white">Líneas Directas de Emergencia Nacional</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Procedimiento estandarizado para llamadas de emergencia, ubicación por coordenadas y reporte claro a las centrales de despacho.
+                        </p>
+                        <div class="grid grid-cols-3 gap-2 text-center mt-2 font-mono text-xs">
+                            <div class="bg-red-950 border border-red-800 p-2 rounded text-red-300"><strong>911</strong><br><span class="text-[9px]">SUME 911</span></div>
+                            <div class="bg-amber-950 border border-amber-800 p-2 rounded text-amber-300"><strong>103</strong><br><span class="text-[9px]">BOMBEROS</span></div>
+                            <div class="bg-blue-950 border border-blue-800 p-2 rounded text-blue-300"><strong>104</strong><br><span class="text-[9px]">POLICÍA</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PANE 4: NORMAS INTERNACIONALES VIGENTES -->
+            <section id="pane-normas-internacionales" class="tab-pane hidden space-y-6">
+                <div class="pb-4 border-b border-slate-800">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-heart-circle-bolt text-red-500"></i> Actualizaciones Científicas Internacionales (2025/2026)
+                    </h2>
+                    <p class="text-xs text-slate-400">AHA 2025, ILCOR 2025, ERC 2025, STOP THE BLEED® ACS 2025 y Guías TCCC JTS/CoTCCC del 1 de mayo de 2026.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <!-- AHA 2025 -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <div class="w-10 h-10 rounded-lg bg-red-600/20 text-red-400 flex items-center justify-center font-bold text-xl">
+                            <i class="fa-solid fa-heart-pulse"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">AHA 2025 Guidelines CPR &amp; ECC</h3>
+                        <ul class="text-xs text-slate-300 space-y-2 list-disc pl-4">
+                            <li>Frecuencia de compresiones en adulto: <strong>100 a 120 por minuto</strong>.</li>
+                            <li>Profundidad de compresión en adulto: <strong>5 a 6 cm</strong>, permitiendo reexpansión torácica.</li>
+                            <li>Reducir interrupciones y reforzar la RCP asistida por operador telefónico.</li>
+                        </ul>
+                        <a class="text-xs text-blue-300 underline" href="https://cpr.heart.org/en/resuscitation-science/cpr-and-ecc-guidelines" target="_blank" rel="noopener">Consultar guías AHA oficiales</a>
+                    </div>
+
+                    <!-- ILCOR 2025 -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <div class="w-10 h-10 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold text-xl">
+                            <i class="fa-solid fa-globe"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">ILCOR 2025 · First Aid CoSTR</h3>
+                        <ul class="text-xs text-slate-300 space-y-2 list-disc pl-4">
+                            <li>Consenso internacional de ciencia y recomendaciones de tratamiento en primeros auxilios.</li>
+                            <li>Base científica para la actualización de protocolos de primeros auxilios y reanimación.</li>
+                            <li>Aplicar cada recomendación de acuerdo con el alcance formativo y el protocolo local.</li>
+                        </ul>
+                        <a class="text-xs text-blue-300 underline" href="https://costr.ilcor.org/" target="_blank" rel="noopener">Consultar ILCOR CoSTR</a>
+                    </div>
+
+                    <!-- STOP THE BLEED UPDATED -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <div class="w-10 h-10 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold text-xl">
+                            <i class="fa-solid fa-droplet"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">STOP THE BLEED® · Programa actualizado</h3>
+                        <ul class="text-xs text-slate-300 space-y-2 list-disc pl-4">
+                            <li>Curso ACS renovado en <strong>2025</strong>, con recursos visuales más claros y adaptables a comunidades.</li>
+                            <li>Énfasis en comprender el flujo sanguíneo y aplicar tres técnicas: <strong>presión directa, empaquetamiento de heridas y torniquete</strong>.</li>
+                            <li>El programa reconoce cursos aprobados del ACS y de Stop the Bleed Coalition; ambos enseñan las tres técnicas esenciales.</li>
+                        </ul>
+                        <a class="text-xs text-blue-300 underline" href="https://www.facs.org/for-medical-professionals/news-publications/news-and-articles/acs-brief/april-8-2025-issue/acs-launches-new-stop-the-bleed-course-updated-instructor-portal/" target="_blank" rel="noopener">Actualización ACS 2025</a><br>
+                        <a class="text-xs text-blue-300 underline" href="https://www.dodstopthebleed.org/training/" target="_blank" rel="noopener">Estándar oficial de formación STOP THE BLEED®</a>
+                    </div>
+
+                    <!-- TCCC UPDATED -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <div class="w-10 h-10 rounded-lg bg-red-600/20 text-red-300 flex items-center justify-center font-bold text-xl">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">TCCC · Guías actualizadas 2026</h3>
+                        <ul class="text-xs text-slate-300 space-y-2 list-disc pl-4">
+                            <li>Referencia vigente: <strong>1 de mayo de 2026</strong>, publicada por JTS / CoTCCC.</li>
+                            <li>Organiza la atención en Care Under Fire/Threat, Tactical Field Care y Tactical Evacuation Care.</li>
+                            <li>La actualización 2026 incluye revisiones y aclaraciones en la atención del trauma táctico. Consultar el documento vigente y el nivel de proveedor.</li>
+                            <li><strong>Ámbito militar:</strong> TCCC no equivale a primeros auxilios civiles ni sustituye TECC.</li>
+                        </ul>
+                        <a class="text-xs text-blue-300 underline" href="https://jts.health.mil/index.cfm/committees/cotccc/guidelines" target="_blank" rel="noopener">Guías actuales JTS / CoTCCC</a><br>
+                        <a class="text-xs text-blue-300 underline" href="https://pubmed.ncbi.nlm.nih.gov/42314210/" target="_blank" rel="noopener">Publicación de actualización 1 mayo 2026</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PANE 5: VISTA PREVIA Y GENERADOR DE CARTA DESCRIPTIVA -->
+            <section id="pane-vista-previa" class="tab-pane hidden space-y-6">
+                
+                <!-- Barra de Acciones -->
+                <div class="no-print bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-file-contract text-red-500"></i> Documento Oficial Generado
+                        </h2>
+                        <p class="text-xs text-slate-400">Carta descriptiva formateada según el Decreto 346 y estándares de Panamá.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="copiarAlPortapapeles()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-2">
+                            <i class="fa-solid fa-copy"></i> Copiar Texto
+                        </button>
+                        <button onclick="printCarta()" class="px-4 py-2 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white transition flex items-center gap-2 shadow">
+                            <i class="fa-solid fa-print"></i> Imprimir / Guardar PDF
+                        </button>
+                    </div>
+                    <p class="w-full text-[10px] text-slate-500">Para evitar fecha, título y dirección automáticos del navegador, desactive “Encabezados y pies de página” en el cuadro de impresión.</p>
+                </div>
+
+                <!-- CONTENEDOR DOCUMENTO IMPRESO -->
+                <div id="carta-documento" class="print-container bg-white text-slate-900 p-8 md:p-12 rounded-xl shadow-2xl space-y-8 max-w-4xl mx-auto border border-slate-200">
+                    
+                    <!-- ENCABEZADO OFICIAL -->
+                    <div class="border-b-2 border-slate-900 pb-6 flex justify-between items-start">
+                        <div>
+                            <img id="doc-safetypro-logo" alt="SafetyPro" class="safetypro-logo w-56 h-auto object-contain mb-3" />
+                            <span class="text-xs font-bold uppercase tracking-widest text-red-700">DOCUMENTO OFICIAL DE PROGRAMA ACADÉMICO</span>
+                            <h1 class="text-2xl font-black tracking-tight text-slate-900 uppercase mt-1" id="doc-titulo">CURSO DE PRIMER RESPONDIENTE Y SOPORTE VITAL BÁSICO (RCP / DEA)</h1>
+                            <p class="text-sm font-semibold text-slate-600" id="doc-subtitulo">Alineado al Decreto Ejecutivo 346, Ley 57 de 2016, Ley 372 de 2023 y Guías AHA/ILCOR 2025</p>
+                        </div>
+                        <div class="text-right text-xs text-slate-500 border-l-2 border-slate-200 pl-4">
+                            <div><strong>República de Panamá</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- TABLA METADATOS -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs">
+                        <div>
+                            <span class="text-slate-500 font-semibold block">Empresa / Cliente:</span>
+                            <strong id="doc-empresa" class="text-slate-800">Empresa Industrial Panameña S.A.</strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 font-semibold block">Instructor Acreditado:</span>
+                            <strong id="doc-instructor" class="text-slate-800">Lic. Juan Pérez - TUM</strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 font-semibold block">Duración Total:</span>
+                            <strong id="doc-duracion" class="text-slate-800">40 h 00 min (16 h 00 min teoría / 24 h 00 min práctica)</strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 font-semibold block">Rubro y Perfil:</span>
+                            <strong id="doc-rubro" class="text-slate-800">Industrial / Brigadistas</strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 font-semibold block">Participantes:</span>
+                            <strong id="doc-participantes" class="text-slate-800">15</strong>
+                        </div>
+                    </div>
+
+                    <!-- INVERSIÓN DE LA CAPACITACIÓN -->
+                    <div class="grid grid-cols-1 gap-2 bg-emerald-50 p-4 rounded-lg border border-emerald-200 text-xs">
+                        <div>
+                            <span class="text-emerald-800 font-semibold block">Inversión total de la capacitación:</span>
+                            <strong id="doc-inversion-total" class="text-emerald-900 text-lg">Pendiente de cotización</strong>
+                        </div>
+                    </div>
+
+                    <!-- OBJETIVOS GENERALES Y ESPECÍFICOS -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-black uppercase text-slate-900 border-b border-slate-300 pb-1">
+                            1. OBJETIVOS DEL PROGRAMA FORMATIVO
+                        </h3>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800">Objetivo General:</h4>
+                            <p id="doc-obj-general" class="text-xs text-slate-700 mt-1 text-justify leading-relaxed">
+                                Capacitar a los participantes con los conocimientos teóricos y habilidades prácticas necesarias para actuar como Primeros Respondientes calificados ante situaciones de urgencia o emergencia médica en su entorno de trabajo, ejecutando RCP de alta calidad, uso correcto del Desfibrilador Externo Automático (DEA) y control efectivo de hemorragias masivas, garantizando el cumplimiento normativo del Decreto Ejecutivo 346 y la Ley 57 de Panamá.
+                            </p>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800">Objetivos Específicos:</h4>
+                            <ul id="doc-obj-especificos" class="list-disc pl-5 text-xs text-slate-700 space-y-1 mt-1">
+                                <!-- Generado por JS -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- MARCO LEGAL APLICABLE -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-black uppercase text-slate-900 border-b border-slate-300 pb-1">
+                            2. FUNDAMENTACIÓN LEGAL EN PANAMÁ
+                        </h3>
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs space-y-2 text-slate-700">
+                            <p><strong>• Decreto Ejecutivo N.º 346 del 26 de diciembre de 2017:</strong> Para el curso básico establece un mínimo de 8 horas académicas y contenidos mínimos aplicables. El artículo 10 no impone una distribución 4/4 entre teoría y práctica. Este programa utiliza una distribución propia en la que la práctica supera a la teoría.</p>
+                            <p><strong>• Ley 57 del 30 de noviembre de 2016:</strong> Amparo legal de protección al "Buen Samaritano", eximiendo de responsabilidad a socorristas capacitados que actúen de buena fe.</p>
+                            <p><strong>• Ley 372 del 1 de marzo de 2023:</strong> Reglamentación del uso de Desfibriladores Externos Automáticos (DEA) y su capacitación continua recertificada cada 2 años.</p>
+                            <p><strong>• Integración SUME 911 / 103 / 104:</strong> Protocolo oficial de despacho de emergencias en la República de Panamá.</p>
+                        </div>
+                    </div>
+
+                    <!-- TEMARIO DETALLADO -->
+                    <div class="space-y-4 print-page-break">
+                        <h3 class="text-sm font-black uppercase text-slate-900 border-b border-slate-300 pb-1">
+                            3. CONTENIDO CURRICULAR Y TEMARIO DETALLADO
+                        </h3>
+                        <table class="w-full text-xs text-left border-collapse border border-slate-300">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-800">
+                                    <th class="border border-slate-300 p-2 w-10 text-center">Mód.</th>
+                                    <th class="border border-slate-300 p-2">Módulo / Tema Principal</th>
+                                    <th class="border border-slate-300 p-2">Contenidos Clave</th>
+                                    <th class="border border-slate-300 p-2 w-20 text-center">Teoría</th>
+                                    <th class="border border-slate-300 p-2 w-20 text-center">Práctica</th>
+                                    <th class="border border-slate-300 p-2 w-24 text-center">Acumulado</th>
+                                    <th class="border border-slate-300 p-2 w-24">Referencia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="doc-tabla-temario">
+                                <!-- Generado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- METODOLOGÍA Y EVALUACIÓN -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-black uppercase text-slate-900 border-b border-slate-300 pb-1">
+                            4. METODOLOGÍA Y CRITERIOS DE EVALUACIÓN
+                        </h3>
+                        <div class="text-xs text-slate-700 space-y-2">
+                            <p>El programa prioriza el aprendizaje práctico, complementado con fundamentos teóricos, simuladores QCPR, demostraciones y talleres interactivos. La dosificación de cada módulo y los acumulados se expresan en horas y minutos.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                                    <strong class="block text-slate-900">Asistencia Obligatoria:</strong>
+                                    <span>100% de la carga horaria programada.</span>
+                                </div>
+                                <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                                    <strong class="block text-slate-900">Evaluación Teórica:</strong>
+                                    <span>Nota mínima del <strong>75%</strong> en prueba escrita.</span>
+                                </div>
+                                <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                                    <strong class="block text-slate-900">Evaluación Práctica (ECOE):</strong>
+                                    <span>100% de cumplimiento en checklist de RCP y DEA.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RECURSOS DIDÁCTICOS REQUERIDOS -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-black uppercase text-slate-900 border-b border-slate-300 pb-1">
+                            5. LOGÍSTICA Y RECURSOS ASIGNADOS
+                        </h3>
+                        <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700">
+                            <ul id="doc-lista-equipamiento" class="grid grid-cols-1 md:grid-cols-2 gap-2 list-disc pl-4">
+                                <!-- JS Populated -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- JUSTIFICACIÓN DE TEMAS ADICIONALES -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-black uppercase text-slate-900 border-b border-slate-300 pb-1">
+                            6. JUSTIFICACIÓN TÉCNICO-INSTRUCCIONAL DE TEMAS ADICIONALES
+                        </h3>
+                        <div id="doc-justificacion-temas" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                            <!-- JS Populated -->
+                        </div>
+                    </div>
+
+                    <!-- FIRMAS OFICIALES -->
+                    <div class="print-signatures pt-12 grid grid-cols-2 gap-12 text-center text-xs text-slate-800">
+                        <div>
+                            <div class="border-b border-slate-400 mb-2 pb-8"></div>
+                            <strong>Firma del Instructor Facilitador con Acreditación MINSA</strong>
+                        </div>
+                        <div>
+                            <div class="border-b border-slate-400 mb-2 pb-8"></div>
+                            <strong>Firma por parte del cliente</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT LÓGICA E INTERACTIVIDAD -->
+    <script>
+        const SAFETYPRO_LOGO_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB7QAAAEwCAYAAAA3oE7LAAABgmlDQ1BzUkdCIElFQzYxOTY2LTIuMQAAKJF1kc8rRFEUxz8zQ+P3KBYWFi8NpWY0RomNMhJq0jRG+bWZefNLzYzXeyPJVtlOUWLj14K/gK2yVopIyVqWxAY95xk1k8y5nXs+93vvOd17LtgjGTVrVPkgm8vr4bGAMjM7pzifcVJLI010R1VDGw6FglS091tsVrz2WrUqn/vX6uMJQwVbjfCQqul54XHh4Epes3hLuFVNR+PCJ8IeXS4ofGPpsSI/WZwq8qfFeiQ8AvZmYSVVxrEyVtN6VlhejjubWVZ/72O9pCGRm56S2CHejkGYMQIoTDDKCP30MihzP1789MiKCvm+n/xJliRXlVljFZ1FUqTJ4xF1WaonJCZFT8jIsGr1/29fjWSfv1i9IQDVj6b52gnOTfgqmObHgWl+HYLjAc5zpfylfRh4E71Q0tx74FqH04uSFtuGsw1ou9eievRHcojbk0l4OYbGWWi5grr5Ys9+9zm6g8iafNUl7OxCl5x3LXwDOWRn0Rrk95IAAAAJcEhZcwAALiMAAC4jAXilP3YAACAASURBVHic7N13nBXV/f/x1+5Zlg7SRBAQUYoUqYdm7733XnHsBTUaNZZoYheNmuSkqD9jjJoeoyZ+jSlGEx2NJbaosSXRRBC7KHLg98dcFHEXdufOvWfm3vfz8bgPcXfnzBu43L07n/l8TgNSEcZZA8TAxNBZRFK4G9jaR/GS0EFERERERERERERERESkfjWGDlDDDkHFbCmuLYHtQocQERERERERERERERGR+tYQOkAtMs72AJ4HVg2dRaQMzwNjfRQvDB1ERERERERERERERERE6pM6tCvjLFTMluIbDhwbOoSIiIiIiIiIiIiIiIjUL3VoZ8w4Oxx4CugQOotIBt4FhvsofiN0EBEREREREREREREREak/6tDO3mWomC21owdwfugQIiIiIiIiIiIiIiIiUp/UoZ0h4+wWwN2hc4hkbAkwyUfxY6GDiIiIiIiIiIiIiIiISH1RQTsjxtkm4DFgTOgsIhXwR2ATH8VLQgcRERERERERERERERGR+qGR49mJUDFbatdGwK6hQ4iIiIiIiIiIiIiIiEh9UYd2BoyzvYHngd6hs4hU0MvAOj6KPwodREREREREREREREREROqDOrSzcS4qZkvtGwrMDh1CRERERERERERERERE6oc6tMtknB0NPAGY0FlEquADYISP4tdCBxEREREREREREREREZHapw7tMhhnG4A5qJgt9aMr8PXQIURERERERERERERERKQ+qEO7DMbZ7YHb0x7f1GhoalAtXKpv0RLPosW+nCWm+Sh+KKs8IiIiIiIiIiIiIiIiIi1RQTsl42wz8CQwPM3xjQ2NPLDzdUzpNzrbYCJtcMerf2an35S1HfZfgPV8FC/JKJKIiIiIiIiIiIiIiIjIF2jkeHrHkrKYDbDf8K1VzJZgthuyPlsMmlbOEjOAfTKKIyIiIiIiIiIiIiIiItIidWinYJxdFXge6JHm+G4duvDMXj9hQJe+2QYTaYen33qJyT/dj08WL0q7xH+AkT6KP8gwloiIiIiIiIiIiIiIiMin1KGdzvmkLGYDnDbhIBWzJbjRvdYkGr1rOUusDnwpozgiIiIiIiIiIiIiIiIiX6AO7XYyzk4A/kbKP7s1uw/kyT1vo6NpzjaYSApvffweo27dlTc/eiftEh+RdGm/mmEsEREREREREREREREREUAd2u1inG0ArqSMGwEunn68itmSG706dufsybPKWaITcElGcUREREREREREREREREQ+RwXt9tkV2CjtwRsOmMSua26aYRyR8h05endG9xpWzhJ7GWfXzyqPiIiIiIiIiIiIiIiIyFIqaLeRcbYTcFnq4xsauXLmyRkmEsmGaWjkihkn0VDeDgRXGWf1eiIiIiIiIiIiIiIiIiKZUgGq7WYDQ9MefOionVi3z/Ds0ohkaPNB09hujbKarCcBB2eTRkRERERERERERERERCRRVktmvTDODgSeA7qmOb5nczee3fun9OvUK9tgIhl64d1/Mf7H+/CxX5h2if8BI3wUv5thLBEREREREREREREREalj6tBum6+TspgNcOakw1TMltxbu8dgjh2zZzlL9AfOyCiOiIiIiIiIiIiIiIiIiDq0V8Y4OxV4MO3xI3oO4Yk9bqWp0WSYSqQy3l34Aevcuhv/WzA/7RILgdE+iv+ZYSwRERERERERERERERGpU+rQXgHjbANwZTlrXDrjRBWzpTB6NHflq/aocpZoBi7LKI6IiIiIiIiIiIiIiIjUORW0V2wfYEbag7ccNJ3thqyfYRyRyjt01I5M6DuynCV2Ns5ullUeERERERERERERERERqV8qaLfCONsVuCTt8R0am7h85uwME4lURwMNzJkxm4bydiS40jjblFUmERERERERERERERERqU8qaLfuS8DqaQ+ORu/KOqsMzS6NSBVtMGAiuw3btJwlxgKzMoojIiIiIiIiIiIiIiIidaqsFsxaZZwdAvwD6JTm+D6devLsXj+jV8fu2QYTqaJX3n+dsbftyYJFH6dd4k1guI/itzKMJSIiIiIiIiIiIiIiInVEHdotu4SUxWyAcyYfoWK2FN4a3QZw0rh9y1miD3BORnFERERERERERERERESkDqlDeznG2fWB+9IeP7rXMB7d/WZMg+4VkOL7cNFHrHPrbvzng7lpl1gEjPNR/GyGsURERERERERERERERKROqOq6DONsI3BV2uMbaOCKGSepmC01o0tTJ7429ZhylmgCrsgojoiIiIiIiIiIiIiIiNQZVV4/72BgUtqDt19jAzYfNC27NCI5sP/wbZm66thyltjGOLttVnlERERERERERERERESkfmjkeIlxtgfwHNA/zfEdTTOP7/Ej1u4xONtgIjnw0BtPsv4vD2fxksVpl/gHyejxTzKMJSIiIiIiIiIiIiIiIjWuKXSAHDmDlMVsgGPH7Kli9nL8ksW898kHvPPx+8z96G3eWDC/nIJoRfXs2J3+nXrTq1N3unfoSifTHDpSrkxddSz7rL0VP3z+rrRLjASOAa7MLpWIiIiIiIiIiIiIiIjUOnVoA8bZtYCngVRVzP6de/Ps3j+je4cu2QYroAWLPuahuU/x7ad+wo9fvCd0nNRG9RzKKRMOYJsh69G/c+/QcXLhtQ/nMvrWPXj/kw/TLvEOMNxH8dwMY4mIiIiIiIiIiIiIiEgNU4d24jJSFrMBvmqPqvti9geLFnDmg9/kmqduDR0lE8++8zKH//F8AMb0GsbNm3+dMb2GBU4V1sAu/Th1/IGc8/C30y7RE/gqcFR2qURERERERERERERERKSW1X2HtnF2MyB1K/GEviOJd72Rhjr9o1y02PPNp3/M7AeuCB2l4rZYfRo3bHpeXXdsf+QXMubWPXjl/dfTLrEYmOij+IkMY4mIiIiIiIiIiIiIiEiNqs8qbIlxtgl4FBib5vgGGvj9jo71V5uQbbCCeGfh+8z4+cE8986roaNU1V3bXs0Wg6aFjhHMj1+8h33u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";
+        function cargarLogosSafetyPro() {
+            const appLogo = document.getElementById('app-safetypro-logo');
+            const docLogo = document.getElementById('doc-safetypro-logo');
+            if (appLogo) appLogo.src = SAFETYPRO_LOGO_DATA;
+            if (docLogo) docLogo.src = SAFETYPRO_LOGO_DATA;
+        }
+
+        // ESTADO GLOBAL DE LA APLICACIÓN
+        const state = {
+            nivel: 'primer_respondiente', 
+            rubro: 'industrial',
+            participantes: 15,
+            tactico: 'ninguno',
+            htTotal: 16,
+            hpTotal: 24,
+            duracionTotal: 40,
+            htTotalMinutos: 960,
+            hpTotalMinutos: 1440,
+            duracionTotalMinutos: 2400,
+            costoPorParticipante: null,
+            inversionTotal: null,
+            modulosSeleccionados: [],
+            evaluacionIncluida: true,
+            chartInstance: null
+        };
+
+        // BASE DE DATOS DE RUBROS Y SUS RIESGOS ASOCIADOS
+        const rubrosData = {
+            escolar: {
+                nombre: 'Escolar / Educativo',
+                icon: 'fa-graduation-cap',
+                descripcion: 'Riesgos: OVACE por alimentos u objetos, caídas en zonas recreativas, convulsiones febriles, crisis asmáticas, anafilaxia por alergias y atención a alumnos neurodivergentes.',
+                modulosRecomendados: ['mod-ovace', 'mod-convulsiones', 'mod-alergias', 'mod-inmovilizacion', 'mod-neurodivergencia'],
+                justificacion: 'Se incorporan módulos específicos de RCP pediátrica/lactantes, manejo de anafilaxia, OVACE en niños y abordaje en neurodivergencia al ser urgencias primarias en centros escolares.'
+            },
+            industrial: {
+                nombre: 'Industrial / Manufactura',
+                icon: 'fa-industry',
+                descripcion: 'Riesgos: Atrapamientos mecánicos, quemaduras químicas/térmicas, descargas eléctricas de alto voltaje, amputaciones y shock por hemorragias.',
+                modulosRecomendados: ['mod-torniquetes', 'mod-amputaciones', 'mod-quemaduras', 'mod-electrico', 'mod-neurodivergencia'],
+                justificacion: 'El entorno industrial presenta riesgo de traumatismos exanguinantes y quemaduras. Se añade el control avanzado de hemorragias (Stop the Bleed), manejo de sustancias químicas y abordaje adaptado.'
+            },
+            transporte: {
+                nombre: 'Transporte (Terrestre, Marítimo, Canal)',
+                icon: 'fa-truck-fast',
+                descripcion: 'Riesgos: Colisiones vehiculares, atrapamiento en estructuras, politraumatismo, hemorragias severas, ahogamiento y shock hipovolémico.',
+                modulosRecomendados: ['mod-triaje', 'mod-extricacion', 'mod-torniquetes', 'mod-inmovilizacion', 'mod-neurodivergencia'],
+                justificacion: 'Se añaden técnicas de extricación rápida, control de hemorragias exanguinantes con torniquete y triaje inicial para accidentes de tránsito masivos.'
+            },
+            almacenaje: {
+                nombre: 'Almacenaje y Logística',
+                icon: 'fa-boxes-stacked',
+                descripcion: 'Riesgos: Caída de cargas a distinto nivel, atropello por montacargas, colapso de estanterías, aplastamiento de extremidades.',
+                modulosRecomendados: ['mod-torniquetes', 'mod-aplastamiento', 'mod-inmovilizacion', 'mod-ovace', 'mod-neurodivergencia'],
+                justificacion: 'Se justifica la inclusión de síndrome de aplastamiento e inmovilización rápida debido al uso continuo de maquinaria de elevación y bodegaje pesado.'
+            },
+            oficinas_pub: {
+                nombre: 'Oficinas Públicas',
+                icon: 'fa-building-columns',
+                descripcion: 'Riesgos: Eventos cardiovasculares (Paro Cardíaco, ACV), síncope, crisis de hipertensión, aglomeraciones y atención inclusiva.',
+                modulosRecomendados: ['mod-rcp-dea', 'mod-acv', 'mod-sincope', 'mod-crisis-ansiedad', 'mod-neurodivergencia'],
+                justificacion: 'Dada la alta afluencia de público diverso, se refuerza la Desfibrilación Externa Automática (Ley 372), la identificación de ACV/Stroke y abordaje de neurodivergencias.'
+            },
+            oficinas_priv: {
+                nombre: 'Oficinas Privadas / Corporativo',
+                icon: 'fa-building',
+                descripcion: 'Riesgos: Paro cardíaco repentino, síndrome coronario agudo, caídas en escaleras, atragantamiento en áreas de comedor.',
+                modulosRecomendados: ['mod-rcp-dea', 'mod-acv', 'mod-ovace', 'mod-sincope', 'mod-neurodivergencia'],
+                justificacion: 'Se enfoca el plan en RCP de alta calidad, uso del DEA y primeras respuestas ante enfermedades crónicas no transmisibles y atención neurodivergente.'
+            },
+            seguridad: {
+                nombre: 'Seguridad y Vigilancia Privada',
+                icon: 'fa-shield-cat',
+                descripcion: 'Riesgos: Heridas por arma de fuego/blanca, traumatismos por agresión física, hemorragias exanguinantes, entornos hostiles.',
+                modulosRecomendados: ['mod-torniquetes', 'mod-naloxona', 'mod-triaje', 'mod-neurodivergencia'],
+                justificacion: 'Se requiere formación en primeros auxilios tácticos (TECC/TCCC), manejo de sellos torácicos, colocación de torniquetes y desescalada sensorial.'
+            },
+            construccion: {
+                nombre: 'Construcción y Obras Civiles',
+                icon: 'fa-helmet-safety',
+                descripcion: 'Riesgos: Caídas de altura, electrocución, sepultamiento, heridas por herramientas de corte, traumatismos craneales.',
+                modulosRecomendados: ['mod-inmovilizacion', 'mod-torniquetes', 'mod-electrico', 'mod-aplastamiento', 'mod-neurodivergencia'],
+                justificacion: 'Se prioriza la inmovilización espinal cervical y el control de hemorragias traumáticas masivas por ser las causas de mayor morbimortalidad en obra.'
+            },
+            salud: {
+                nombre: 'Sector Salud / Clínicas',
+                icon: 'fa-user-nurse',
+                descripcion: 'Riesgos: Paro cardiorrespiratorio complejo, colapso de pacientes, exposición a biopeligros, emergencias alérgicas.',
+                modulosRecomendados: ['mod-rcp-dea', 'mod-alergias', 'mod-convulsiones', 'mod-triaje', 'mod-naloxona', 'mod-neurodivergencia'],
+                justificacion: 'Se profundiza en el soporte de soporte vital intermedio, ventilación con bolsa-válvula-mascarilla (BVM), bioseguridad y protocolo inclusivo.'
+            },
+            comercio: {
+                nombre: 'Comercio y Retail',
+                icon: 'fa-cart-shopping',
+                descripcion: 'Riesgos: Atragantamiento de clientes, caídas al mismo nivel, síncope por calor, emergencias cardiovasculares.',
+                modulosRecomendados: ['mod-rcp-dea', 'mod-ovace', 'mod-sincope', 'mod-alergias', 'mod-neurodivergencia'],
+                justificacion: 'Se enfatiza la respuesta inmediata en espacios comerciales bajo los parámetros obligatorios de la Ley 372 de uso del DEA y comunicación efectiva.'
+            },
+            otros: {
+                nombre: 'Otros Sectores / Personalizado',
+                icon: 'fa-cubes',
+                descripcion: 'Riesgos: Riesgos generales de primeros auxilios y emergencias médicas comunitarias u ocupacionales.',
+                modulosRecomendados: ['mod-rcp-dea', 'mod-ovace', 'mod-torniquetes', 'mod-inmovilizacion', 'mod-neurodivergencia'],
+                justificacion: 'Estructura modular estándar ajustada a los requerimientos normativos del Decreto Ejecutivo 346 y normativas vigentes.'
+            }
+        };
+
+        // CATÁLOGO GENERAL DE MÓDULOS CON NORMATIVA (Actualizado Decreto 346 & Neurodivergencia)
+        const catalogoModulos = [
+            { id: 'mod-pas-bio', nombre: 'Conducta PAS, Bioseguridad & Evaluación Paciente', obligatorio: true, ht: 1, hp: 1, ref: 'DE 346 / Ley 57', desc: 'Proteger, Alertar, Socorrer, amparo de Ley 57 Buen Samaritano, EPP, evaluación primaria y secundaria.' },
+            { id: 'mod-rcp-dea', nombre: 'Soporte Vital Básico (RCP) & DEA Adulto, Pediatría y Bebé', obligatorio: true, ht: 2, hp: 3, ref: 'DE 346 / AHA 2025 / Ley 372', desc: 'RCP de alta calidad (100-120 cpm), reexpansión, DEA en adultos, niños y lactantes.' },
+            { id: 'mod-ovace', nombre: 'Obstrucción de Vía Aérea (OVACE)', obligatorio: true, ht: 1, hp: 1, ref: 'DE 346 / ILCOR 2025', desc: 'Maniobra de Heimlich, golpes interescapulares, manejo de vía aérea en adulto, niño y lactante.' },
+            { id: 'mod-sincope', nombre: 'Síncope, Lipotimia & Crisis de Ansiedad', obligatorio: true, ht: 1, hp: 1, ref: 'DE 346 / ERC 2025', desc: 'Posición Lateral de Seguridad (PLS), lipotimias, síncope vasovagal y técnicas de autorregulación/primeros auxilios psicológicos.' },
+            { id: 'mod-convulsiones', nombre: 'Convulsiones & Detección Temprana de ACV / Stroke', obligatorio: true, ht: 1, hp: 1, ref: 'DE 346 / AHA 2025 / FAST', desc: 'Protección y manejo durante crisis convulsivas (febriles/epilépticas) y detección precoz con Escala FAST/Cincinnati.' },
+            { id: 'mod-quemaduras', nombre: 'Quemaduras Químicas, Térmicas & Eléctricas', obligatorio: true, ht: 1, hp: 1, ref: 'DE 346 / ERC 2025', desc: 'Clasificación por grados, enfriamiento/irrigación prolongada, manejo de sustancias químicas e interpretación Hojas SDS.' },
+            { id: 'mod-alergias', nombre: 'Anafilaxia & Emergencias Respiratorias', obligatorio: true, ht: 1, hp: 1, ref: 'DE 346 / ILCOR 2025', desc: 'Crisis de asma, hiperventilación, reconocimiento de anafilaxia severa y simuladores de autoinyectores de epinefrina.' },
+            { id: 'mod-neurodivergencia', nombre: 'Abordaje de Pacientes Neurodivergentes (TEA / TDAH)', obligatorio: false, ht: 1, hp: 1, ref: 'Protocolo Inclusivo 2025', desc: 'Técnicas de desescalada verbal, manejo de sobrecarga sensorial, comunicación adaptada con pictogramas y abordaje físico respetuoso.' },
+            { id: 'mod-torniquetes', nombre: 'Control de Hemorragias Graves (STOP THE BLEED®)', obligatorio: false, ht: 1, hp: 2, ref: 'ACS STOP THE BLEED® Course 2025 / DoW', desc: 'Práctica de las tres técnicas centrales del programa actualizado: presión directa, empaquetamiento de heridas y aplicación de torniquete en extremidades con hemorragia potencialmente mortal.' },
+            { id: 'mod-inmovilizacion', nombre: 'Inmovilización & Traumatismos Músculo-Esqueléticos', obligatorio: false, ht: 1, hp: 2, ref: 'DE 346 / PHTLS', desc: 'Vendajes normados, férulas de inmovilización, manejo cervical y atención inicial de fracturas expuestas.' },
+            { id: 'mod-amputaciones', nombre: 'Amputaciones & Síndrome de Aplastamiento', obligatorio: false, ht: 1, hp: 1, ref: 'TECC / ASHI', desc: 'Preservación de partes amputadas, control de sangrado torrencial y aplastamientos en estructuras.' },
+            { id: 'mod-heridas-hemorragias', nombre: 'Heridas (incluidas penetrantes), Control de Hemorragias y Lesiones Musculoesqueléticas', obligatorio: true, ht: 1, hp: 2, ref: 'DE 346 · art. 12.8', desc: 'Contenido integrado del artículo 12.8: reconocimiento y atención inicial de heridas, incluidas heridas penetrantes; control básico de hemorragias y lesiones musculoesqueléticas. No retirar objetos empalados ni realizar procedimientos invasivos; activar el sistema de emergencias y actuar dentro del alcance formativo.' },
+            { id: 'mod-naloxona', nombre: 'Aplicación de Naloxona ante Sospecha de Sobredosis por Opioides', obligatorio: false, ht: 1, hp: 2, ref: 'Protocolo local / indicaciones del producto', desc: 'Reconocimiento de signos compatibles con sobredosis por opioides, activación del sistema de emergencias, simulación de aplicación de naloxona con dispositivo de entrenamiento y vigilancia del paciente conforme al protocolo local y las instrucciones del producto.' },
+            { id: 'mod-triaje', nombre: 'Triaje Primario con Protocolo SHORT', obligatorio: false, ht: 1, hp: 1, ref: 'Protocolo SHORT', desc: 'Clasificación primaria de múltiples víctimas mediante SHORT: Sale caminando, Habla sin dificultad, Obedece órdenes sencillas, Respira y Taponar hemorragias. Aplicar el algoritmo de forma secuencial y activar recursos según el plan del incidente.' }
+        ];
+
+        // INICIALIZACIÓN
+        window.onload = function() {
+            renderizarModulosCheckboxes();
+            actualizarRubro();
+            actualizarNivel();
+            calcularRecursos();
+            cargarLogosSafetyPro();
+            initChart();
+            updateChart(state.htTotal, state.hpTotal);
+            generarCartaDescriptiva();
+        };
+
+        // CAMBIO DE PESTAÑAS (TAB SYSTEM)
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-link').forEach(el => {
+                el.classList.remove('bg-blue-600', 'text-white', 'font-semibold');
+                el.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`pane-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-blue-600', 'text-white', 'font-semibold');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            if(tabId === 'vista-previa') {
+                generarCartaDescriptiva();
+            }
+        }
+
+        // RENDERIZAR MÓDULOS CHECKBOXES
+        function renderizarModulosCheckboxes() {
+            const container = document.getElementById('container-modulos-checkboxes');
+            container.innerHTML = '';
+
+            catalogoModulos.forEach(mod => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border transition flex flex-col justify-between ${
+                    mod.obligatorio ? 'bg-slate-900/90 border-slate-700 opacity-95' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                }`;
+                
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <label class="text-xs font-bold text-white flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="chk-${mod.id}" ${mod.obligatorio ? 'checked disabled' : ''} onchange="toggleModulo('${mod.id}')" class="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700 focus:ring-blue-500">
+                                <span>${mod.nombre}</span>
+                            </label>
+                            ${mod.obligatorio ? '<span class="text-[9px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded border border-red-800 font-semibold">Obligatorio DE 346</span>' : '<span class="text-[9px] bg-blue-900/50 text-blue-300 px-1.5 py-0.5 rounded border border-blue-800">Sugerido</span>'}
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">${mod.desc}</p>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-slate-800/60 flex justify-between items-center text-[10px]">
+                        <span class="text-slate-500">Ref: <strong class="text-slate-300">${mod.ref}</strong></span>
+                        <span class="text-emerald-400 font-semibold">Dosificación en horas y minutos</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            const evaluationCard = document.createElement('div');
+            evaluationCard.className = 'p-4 rounded-xl border border-amber-700/60 bg-amber-950/20 flex flex-col justify-between';
+            evaluationCard.innerHTML = `
+                <div class="space-y-2">
+                    <div class="flex items-start justify-between gap-2">
+                        <label class="text-xs font-bold text-amber-100 flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="chk-evaluacion-final" checked onchange="recalcularModulosActivos()" class="w-4 h-4 rounded text-amber-500 bg-slate-950 border-amber-700 focus:ring-amber-500">
+                            <span>Evaluación final</span>
+                        </label>
+                        <span class="text-[9px] bg-amber-900/50 text-amber-200 px-1.5 py-0.5 rounded border border-amber-700 font-semibold">Opcional</span>
+                    </div>
+                    <p class="text-[11px] text-slate-300 leading-relaxed">Examen teórico de 15 minutos y examen práctico de 45 minutos. Se incluye como módulo separado dentro de las horas totales configuradas.</p>
+                </div>
+                <div class="mt-3 pt-2 border-t border-amber-900/60 flex justify-between items-center text-[10px]">
+                    <span class="text-amber-200">Tiempo reservado</span>
+                    <span class="text-amber-100 font-semibold">15 min teoría / 45 min práctica</span>
+                </div>`;
+            container.appendChild(evaluationCard);
+        }
+
+        // ACTUALIZAR SEGÚN RUBRO
+        function actualizarRubro() {
+            const select = document.getElementById('cfg-rubro');
+            state.rubro = select.value;
+            const data = rubrosData[state.rubro];
+
+            // UI Banner
+            document.getElementById('rubro-nombre').innerText = data.nombre;
+            document.getElementById('rubro-descripcion').innerText = data.descripcion;
+            document.getElementById('rubro-icon').className = `fa-solid ${data.icon}`;
+
+            // Checkboxes dinámicos
+            catalogoModulos.forEach(mod => {
+                const chk = document.getElementById(`chk-${mod.id}`);
+                if (chk && !mod.obligatorio) {
+                    chk.checked = data.modulosRecomendados.includes(mod.id);
+                }
+            });
+
+            recalcularModulosActivos();
+        }
+
+        // ACTUALIZAR SEGÚN NIVEL
+        function actualizarNivel() {
+            const select = document.getElementById('cfg-nivel');
+            state.nivel = select.value;
+            
+            const inputHoras = document.getElementById('cfg-horas-totales');
+            const badge = document.getElementById('badge-nivel');
+
+            if(state.nivel === 'basico') {
+                inputHoras.value = 8;
+                badge.innerText = 'Básico (8h DE 346)';
+            } else if(state.nivel === 'intermedio') {
+                inputHoras.value = 16;
+                badge.innerText = 'Intermedio (16h ACD007)';
+            } else if(state.nivel === 'avanzado') {
+                inputHoras.value = 24;
+                badge.innerText = 'Avanzado (24h ACD008)';
+            } else {
+                inputHoras.value = 40;
+                badge.innerText = 'Primer Respondiente (40h)';
+            }
+
+            recalcularModulosActivos();
+        }
+
+        function actualizarTactico() {
+            const val = document.getElementById('cfg-tactico').value;
+            state.tactico = val;
+            document.getElementById('sidebar-tactico').innerText = val.toUpperCase();
+            
+            // Auto-activar módulo táctico si aplica
+            const chkTorniquetes = document.getElementById('chk-mod-torniquetes');
+            if(val !== 'ninguno') {
+                if(chkTorniquetes) chkTorniquetes.checked = true;
+            }
+            recalcularModulosActivos();
+        }
+
+        function actualizarHorasCustom() {
+            recalcularModulosActivos();
+        }
+
+        function toggleModulo(id) {
+            recalcularModulosActivos();
+        }
+
+        // FORMATO Y DISTRIBUCIÓN DE DURACIONES EN HORAS Y MINUTOS.
+        // La distribución pedagógica global se mantiene en 40% teoría / 60% práctica,
+        // con cálculo en minutos enteros para evitar errores de redondeo.
+        function formatoHorasMinutos(minutos) {
+            const total = Math.max(0, Math.round(Number(minutos) || 0));
+            const horas = Math.floor(total / 60);
+            const mins = total % 60;
+            if (horas === 0) return `${mins} min`;
+            return `${horas} h ${String(mins).padStart(2, '0')} min`;
+        }
+
+        function distribuirMinutos(totalMinutos, modulos) {
+            if (!modulos.length) return [];
+            const pesos = modulos.map(mod => Math.max(0.01, Number(mod.ht || 0) + Number(mod.hp || 0)));
+            const pesoTotal = pesos.reduce((a, b) => a + b, 0);
+            let pesoAcumulado = 0;
+            let minutosAsignados = 0;
+            return pesos.map((peso, idx) => {
+                pesoAcumulado += peso;
+                const acumuladoObjetivo = idx === pesos.length - 1
+                    ? totalMinutos
+                    : Math.round(totalMinutos * pesoAcumulado / pesoTotal);
+                const asignados = acumuladoObjetivo - minutosAsignados;
+                minutosAsignados = acumuladoObjetivo;
+                return asignados;
+            });
+        }
+
+        function recalcularModulosActivos() {
+            const minimoPorNivel = {
+                basico: 8,
+                intermedio: 16,
+                avanzado: 24,
+                primer_respondiente: 40
+            };
+            const minimo = minimoPorNivel[state.nivel] || 8;
+            const horasInput = document.getElementById('cfg-horas-totales');
+            const horasSolicitadas = Math.max(minimo, parseFloat(horasInput.value) || minimo);
+            const totalMinutos = Math.round(horasSolicitadas * 60);
+            horasInput.value = Number.isInteger(totalMinutos / 60)
+                ? String(totalMinutos / 60)
+                : (totalMinutos / 60).toFixed(2);
+
+            const incluirEvaluacion = !!document.getElementById('chk-evaluacion-final')?.checked;
+            const activos = [];
+            catalogoModulos.forEach(mod => {
+                const chk = document.getElementById(`chk-${mod.id}`);
+                if (chk && chk.checked) activos.push({...mod});
+            });
+
+            // Teoría objetivo a minuto entero; práctica completa el total exacto.
+            const teoriaTotalMinutos = Math.round(totalMinutos * 0.40);
+            const practicaTotalMinutos = totalMinutos - teoriaTotalMinutos;
+            // Evaluación fija: 15 minutos teóricos + 45 minutos prácticos.
+            const teoriaExamenMinutos = incluirEvaluacion ? 15 : 0;
+            const practicaExamenMinutos = incluirEvaluacion ? 45 : 0;
+            const teoriaContenidoMinutos = Math.max(0, teoriaTotalMinutos - teoriaExamenMinutos);
+            const practicaContenidoMinutos = Math.max(0, practicaTotalMinutos - practicaExamenMinutos);
+
+            const teoriaPorModulo = distribuirMinutos(teoriaContenidoMinutos, activos);
+            const practicaPorModulo = distribuirMinutos(practicaContenidoMinutos, activos);
+
+            activos.forEach((mod, idx) => {
+                mod.htMinCalculada = teoriaPorModulo[idx] || 0;
+                mod.hpMinCalculada = practicaPorModulo[idx] || 0;
+                mod.duracionMinutos = mod.htMinCalculada + mod.hpMinCalculada;
+                // Horas decimales solamente para el gráfico; la interfaz usa hh/min.
+                mod.htCalculada = mod.htMinCalculada / 60;
+                mod.hpCalculada = mod.hpMinCalculada / 60;
+            });
+
+            state.modulosSeleccionados = activos;
+            state.evaluacionIncluida = incluirEvaluacion;
+            actualizarCertificacionesLogistica();
+            state.htTotalMinutos = teoriaTotalMinutos;
+            state.hpTotalMinutos = practicaTotalMinutos;
+            state.duracionTotalMinutos = totalMinutos;
+            state.htTotal = teoriaTotalMinutos / 60;
+            state.hpTotal = practicaTotalMinutos / 60;
+            state.duracionTotal = totalMinutos / 60;
+            state.horasConfiguradas = totalMinutos / 60;
+
+            document.getElementById('sidebar-horas').innerText = formatoHorasMinutos(totalMinutos);
+            document.getElementById('sidebar-tp').innerText = `${formatoHorasMinutos(teoriaTotalMinutos)} / ${formatoHorasMinutos(practicaTotalMinutos)}`;
+            document.getElementById('sidebar-modulos-count').innerText = activos.length + (incluirEvaluacion ? 1 : 0);
+            updateChart(state.htTotal, state.hpTotal);
+            if (document.getElementById('doc-titulo')) generarCartaDescriptiva();
+        }
+
+        function actualizarCertificacionesLogistica() {
+            const stbItem = document.getElementById('stb-certificacion-panel');
+            if (!stbItem) return;
+            const incluido = state.modulosSeleccionados.some(mod => mod.id === 'mod-torniquetes');
+            stbItem.classList.toggle('hidden', !incluido);
+        }
+
+        // CALCULADORA LOGÍSTICA DE INSUMOS EXTENDIDA Y DETALLADA
+        function calcularRecursos() {
+            const count = Math.max(1, parseInt(document.getElementById('cfg-participantes').value) || 15);
+            state.participantes = count;
+            document.getElementById('sidebar-participantes').innerText = `${count} pax`;
+
+            const maniquiesAdulto = Math.ceil(count / 3);
+            const maniquiesBebe = Math.ceil(count / 5);
+            const deas = Math.ceil(count / 4);
+            const torniquetes = Math.ceil(count / 2);
+            const kitsIndividuales = count;
+
+            document.getElementById('eq-maniquies-adulto').innerText = `${maniquiesAdulto} unids (QCPR)`;
+            document.getElementById('eq-maniquies-ped').innerText = `${maniquiesBebe} unids (Bebé/Lactante)`;
+            document.getElementById('eq-dea').innerText = `${deas} unids (DEA Entrenador)`;
+            document.getElementById('eq-torniquetes').innerText = `${torniquetes} unids (CAT Gen7/SAM)`;
+            document.getElementById('eq-botiquin').innerText = `${kitsIndividuales} kits individuales`;
+
+            actualizarInversion();
+            if (document.getElementById('doc-titulo')) generarCartaDescriptiva();
+        }
+
+        function formatoBalboas(valor) {
+            return `B/. ${new Intl.NumberFormat('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor)}`;
+        }
+
+        function actualizarInversion() {
+            const input = document.getElementById('cfg-costo-participante');
+            const raw = input ? input.value.trim() : '';
+            const participantes = Math.max(1, parseInt(document.getElementById('cfg-participantes').value) || 1);
+
+            if (raw === '' || !Number.isFinite(Number(raw)) || Number(raw) < 0) {
+                state.costoPorParticipante = null;
+                state.inversionTotal = null;
+            } else {
+                state.costoPorParticipante = Number(raw);
+                state.inversionTotal = state.costoPorParticipante * participantes;
+            }
+
+            const total = state.inversionTotal === null ? 'Pendiente' : formatoBalboas(state.inversionTotal);
+            const sidebar = document.getElementById('sidebar-inversion');
+            const docTotal = document.getElementById('doc-inversion-total');
+            if (sidebar) sidebar.innerText = total;
+            if (docTotal) docTotal.innerText = state.inversionTotal === null ? 'Pendiente de cotización' : total;
+        }
+
+        // GRÁFICO DE DONAS (CHART.JS)
+        function initChart() {
+            const ctx = document.getElementById('chartHoras').getContext('2d');
+            state.chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Tiempo teórico (h)', 'Tiempo práctico (h)'],
+                    datasets: [{
+                        data: [4.8, 7.2],
+                        backgroundColor: ['#3B82F6', '#10B981'],
+                        borderColor: '#0F172A',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94A3B8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function updateChart(ht, hp) {
+            if(state.chartInstance) {
+                state.chartInstance.data.datasets[0].data = [ht, hp];
+                state.chartInstance.update();
+            }
+        }
+
+        // GENERADOR DE CARTA DESCRIPTIVA COMPLETA CON HORAS EXACTAS Y ACUMULADOS
+        function generarCartaDescriptiva() {
+            const titulo = document.getElementById('cfg-titulo-curso').value;
+            const empresa = document.getElementById('cfg-empresa').value;
+            const instructor = document.getElementById('cfg-instructor').value;
+            const perfil = document.getElementById('cfg-perfil').value;
+            const rubroInfo = rubrosData[state.rubro];
+
+            document.getElementById('doc-titulo').innerText = titulo.toUpperCase();
+            document.getElementById('doc-empresa').innerText = empresa;
+            document.getElementById('doc-instructor').innerText = instructor;
+            document.getElementById('doc-duracion').innerText = `${formatoHorasMinutos(state.duracionTotalMinutos)} (${formatoHorasMinutos(state.htTotalMinutos)} teoría / ${formatoHorasMinutos(state.hpTotalMinutos)} práctica)`;
+            document.getElementById('doc-rubro').innerText = `${rubroInfo.nombre} / ${perfil}`;
+            document.getElementById('doc-participantes').innerText = String(state.participantes || document.getElementById('cfg-participantes').value || 15);
+
+            // Objetivos Específicos
+            const objEspecificosUl = document.getElementById('doc-obj-especificos');
+            objEspecificosUl.innerHTML = `
+                <li>Dominar la conducta PAS (Proteger, Alertar, Socorrer) y el marco legal de la <strong>Ley 57 del Buen Samaritano</strong>.</li>
+                <li>Ejecutar maniobras de RCP de alta calidad en adultos, niños y lactantes según los estándares <strong>AHA/ILCOR 2025</strong> y el <strong>Decreto Ejecutivo 346</strong>.</li>
+                <li>Operar con seguridad un Desfibrilador Externo Automático (DEA) conforme a la <strong>Ley 372 de Panamá</strong>.</li>
+                <li>Identificar y tratar adecuadamente emergencias como síncope, lipotimias, convulsiones, detección precoz de ACV (FAST), quemaduras, anafilaxia y crisis respiratorias.</li>
+                <li>Aplicar herramientas de abordaje inclusivo y desescalada verbal en pacientes neurodivergentes (TEA/TDAH) durante emergencias.</li>
+                <li>Reconocer y atender inicialmente heridas, incluidas las penetrantes, controlar hemorragias y abordar lesiones musculoesqueléticas conforme al artículo 12.8 del Decreto 346.</li>
+                <li>Cuando se incluya el módulo complementario, reconocer una posible sobredosis por opioides y practicar la aplicación de naloxona con dispositivo de entrenamiento, de acuerdo con el protocolo aplicable.</li>
+                <li>Atender emergencias específicas del rubro <strong>${rubroInfo.nombre}</strong> (hemorragias graves, traumatismos y quemaduras).</li>
+            `;
+
+            // Tabla del temario: cada módulo y acumulado se presentan en horas y minutos.
+            const tablaTbody = document.getElementById('doc-tabla-temario');
+            tablaTbody.innerHTML = '';
+            let acumuladoMinutos = 0;
+
+            state.modulosSeleccionados.forEach((mod, idx) => {
+                const modHtMin = Number.isFinite(mod.htMinCalculada) ? mod.htMinCalculada : Math.round((mod.ht || 0) * 60);
+                const modHpMin = Number.isFinite(mod.hpMinCalculada) ? mod.hpMinCalculada : Math.round((mod.hp || 0) * 60);
+                const duracionModuloMin = modHtMin + modHpMin;
+                acumuladoMinutos += duracionModuloMin;
+
+                const tr = document.createElement('tr');
+                tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+                tr.innerHTML = `
+                    <td class="border border-slate-300 p-2 text-center font-bold text-slate-800">${idx + 1}</td>
+                    <td class="border border-slate-300 p-2 font-bold text-slate-900">${mod.nombre}</td>
+                    <td class="border border-slate-300 p-2 text-slate-700">${mod.desc}</td>
+                    <td class="border border-slate-300 p-2 text-center text-slate-800">${formatoHorasMinutos(modHtMin)}</td>
+                    <td class="border border-slate-300 p-2 text-center text-slate-800">${formatoHorasMinutos(modHpMin)}</td>
+                    <td class="border border-slate-300 p-2 text-center font-bold text-blue-900">${formatoHorasMinutos(acumuladoMinutos)}</td>
+                    <td class="border border-slate-300 p-2 font-semibold text-blue-900">${mod.ref}</td>
+                `;
+                tablaTbody.appendChild(tr);
+            });
+
+            // Evaluación final incluida: 15 minutos teóricos + 45 minutos prácticos.
+            if (state.evaluacionIncluida) {
+                acumuladoMinutos += 60;
+                const trEvaluacion = document.createElement('tr');
+                trEvaluacion.className = 'bg-amber-50 font-semibold';
+                trEvaluacion.innerHTML = `
+                    <td class="border border-slate-300 p-2 text-center font-bold text-amber-900">${state.modulosSeleccionados.length + 1}</td>
+                    <td class="border border-slate-300 p-2 font-bold text-amber-900">Evaluación final</td>
+                    <td class="border border-slate-300 p-2 text-slate-700">Examen teórico escrito (15 minutos) y examen práctico de destrezas (45 minutos).</td>
+                    <td class="border border-slate-300 p-2 text-center text-slate-800">15 min</td>
+                    <td class="border border-slate-300 p-2 text-center text-slate-800">45 min</td>
+                    <td class="border border-slate-300 p-2 text-center font-bold text-amber-900">${formatoHorasMinutos(acumuladoMinutos)}</td>
+                    <td class="border border-slate-300 p-2 font-semibold text-amber-900">Evaluación del programa</td>`;
+                tablaTbody.appendChild(trEvaluacion);
+            }
+
+            // Fila de totales en formato horas/minutos.
+            const trTotal = document.createElement('tr');
+            trTotal.className = 'bg-slate-200 font-bold text-slate-900';
+            trTotal.innerHTML = `
+                <td colspan="3" class="border border-slate-300 p-2 text-right">TOTALES ACUMULADOS:</td>
+                <td class="border border-slate-300 p-2 text-center">${formatoHorasMinutos(state.htTotalMinutos)}</td>
+                <td class="border border-slate-300 p-2 text-center">${formatoHorasMinutos(state.hpTotalMinutos)}</td>
+                <td class="border border-slate-300 p-2 text-center text-blue-950">${formatoHorasMinutos(state.duracionTotalMinutos)}</td>
+                <td class="border border-slate-300 p-2 text-center text-xs">Total del programa</td>
+            `;
+            tablaTbody.appendChild(trTotal);
+
+            // Recursos en la carta: se nombran los ítems, sin cantidades.
+            // Las certificaciones se agregan según la condición de aprobación y los módulos seleccionados.
+            const eqUl = document.getElementById('doc-lista-equipamiento');
+            const recursos = [
+                '<li><strong>Maniquíes de RCP adulto (QCPR)</strong> con monitoreo de profundidad y ritmo.</li>',
+                '<li><strong>Maniquíes de RCP pediátrico y lactante</strong> para prácticas por edad.</li>',
+                '<li><strong>DEA de entrenamiento</strong> con parches de adulto y pediátricos.</li>',
+                '<li><strong>Torniquetes de entrenamiento</strong> (CAT / SAM) y simuladores de extremidad.</li>',
+                '<li><strong>Simuladores de empaquetamiento de heridas</strong> y material de práctica para control de hemorragias.</li>',
+                '<li><strong>Simuladores de autoinyector de epinefrina</strong>.</li>',
+                '<li><strong>Dispositivos de entrenamiento para aplicación de naloxona</strong>.</li>',
+                '<li><strong>Botiquín y material de bioseguridad</strong>: guantes, barreras para RCP, gasas, vendas y apósitos.</li>',
+                '<li><strong>Material audiovisual, fichas de escenarios y listas de cotejo</strong> para evaluación práctica.</li>',
+                '<li><strong>Certificación digital con reconocimiento del MINSA Panamá</strong> para cada participante que acredite correctamente las evaluaciones.</li>'
+            ];
+            const stopTheBleedIncluido = state.modulosSeleccionados.some(mod => mod.id === 'mod-torniquetes');
+            if (stopTheBleedIncluido) {
+                recursos.push('<li><strong>Certificado del programa oficial STOP THE BLEED®</strong>.</li>');
+            }
+            eqUl.innerHTML = recursos.join('');
+
+            // Inversión en carta: costo unitario multiplicado por participantes.
+            actualizarInversion();
+
+            // Justificación Técnico-Instruccional
+            document.getElementById('doc-justificacion-temas').innerHTML = `
+                <p class="mb-2"><strong>Justificación de Adaptación al Rubro ${rubroInfo.nombre}:</strong></p>
+                <p class="text-slate-600 leading-relaxed">${rubroInfo.justificacion}</p>
+                <p class="mt-2 text-slate-600">Los contenidos del artículo 12.8 integran las heridas, incluidas las penetrantes, el control de hemorragias y las lesiones musculoesqueléticas; por tanto, no se presentan como un módulo táctico independiente. La aplicación de naloxona se mantiene como módulo complementario separado y se limita a entrenamiento con dispositivo de práctica, activación de emergencias y protocolo aplicable. La carga total mantiene la distribución pedagógica configurada, con dosificación expresada en horas y minutos.</p>
+            `;
+        }
+
+        // IMPRESIÓN / PDF: solo se imprime la carta generada; el título de la plataforma se oculta.
+        let paneAnteriorImpresion = null;
+        let tituloAppAnterior = null;
+        function printCarta() {
+            const paneActivo = document.querySelector('.tab-pane:not(.hidden)');
+            paneAnteriorImpresion = paneActivo ? paneActivo.id.replace('pane-', '') : 'vista-previa';
+            tituloAppAnterior = document.title;
+            switchTab('vista-previa');
+            generarCartaDescriptiva();
+            // Título en blanco: evita que el nombre de la plataforma aparezca en encabezados del navegador.
+            document.title = ' ';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => setTimeout(() => window.print(), 180));
+            });
+        }
+
+        function restaurarEstadoDespuesDeImprimir() {
+            if (tituloAppAnterior !== null) {
+                document.title = tituloAppAnterior;
+                tituloAppAnterior = null;
+            }
+            if (paneAnteriorImpresion && paneAnteriorImpresion !== 'vista-previa') {
+                switchTab(paneAnteriorImpresion);
+            }
+            paneAnteriorImpresion = null;
+        }
+        window.addEventListener('afterprint', restaurarEstadoDespuesDeImprimir);
+        // Fallback para navegadores que cierran el diálogo sin emitir afterprint.
+        window.addEventListener('focus', () => {
+            if (tituloAppAnterior !== null && !window.matchMedia('print').matches) {
+                setTimeout(restaurarEstadoDespuesDeImprimir, 250);
+            }
+        });
+
+        // COPIAR TEXTO
+        function copiarAlPortapapeles() {
+            generarCartaDescriptiva();
+            const docElement = document.getElementById('carta-documento');
+            const range = document.createRange();
+            range.selectNode(docElement);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+
+            try {
+                const successful = document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                if (successful) {
+                    alert('¡Carta descriptiva copiada con éxito!');
+                } else {
+                    alert('No se pudo copiar el contenido.');
+                }
+            } catch (err) {
+                alert('Error al copiar.');
+            }
+        }
+    </script>
+</body>
+</html>
